@@ -83,6 +83,7 @@ PDF「通用问题」级规则（描述 PC / 静态图）：
 
 | 项 | base | iFinD-PC |
 | --- | --- | --- |
+| 显示位置 | 位置 A | **位置 A**（PC 不覆盖，继承 base）；⚠️ iFinD-**移动端** = [THS](ths.md) = **位置 C**。档位定义见 [tooltip.md § Tooltip 显示位置](../components/tooltip.md#tooltip-显示位置) |
 | 背景 | `#3B3B3B`（深） | **`rgba(255,255,255,.95)`（白）** |
 | 边框 | 无 | **`1px solid #ECECF7`** |
 | 阴影 | 无 | **`0 2px 8px rgba(0,0,0,.12)`** |

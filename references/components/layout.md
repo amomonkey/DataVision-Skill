@@ -37,15 +37,18 @@ Y 轴标签有两种布局形式，**默认使用形式 A**：
 
 ![Y 轴标签避让网格线](../../assets/examples/_shared/y-axis-label-position.png)
 
-- Y 轴标签**渲染在 grid 绘图区内部**（不进入 grid 外的 padding 圈）
-- **顶部轴标签**（最大值）：与**最顶部网格线顶对齐**——标签顶边贴线，向下延伸进第一个网格单元
-- **其余轴标签**（含中间值与 0 值）：分别落在各自对应的网格线上，**底对齐**——标签底边贴线，向上延伸进上方网格单元
-- 因此每个标签始终位于其对应网格线的**单侧**（顶标签在线下、其余在线上），与网格线本身**永不重叠**
-- **数据绘制范围左右内缩**：因 Y 轴标签住在 grid 内，柱体 / 折线 / 散点等数据图形的起止 X 范围必须从 grid 左右边缘**进一步向内缩进**，让出 Y 轴标签所在的水平条带——**条带起点 = grid 边缘**（紧贴内侧），条带宽度 ≥ 该侧 Y 轴最长标签宽度 + 安全间距；数据图形从条带末端（= 数据绘制区起点）开始绘制，与标签**水平分离、永不重叠**
-  - 单 Y 轴（仅一侧有标签）：仅该侧需内缩
-  - 双 Y 轴：两侧均需内缩
-  - 形式 B 不存在此约束（标签在 grid 外侧）
-- **内缩配置**：`xAxis.boundaryGap: ['10%', '10%']`（数据区两侧各从 grid 边缘向内 10%；2026-06-12 由 5% 上调——加大与内嵌 Y 标签的水平间隔，规避数据图形遮挡标签）
+- Y 轴标签**渲染在 grid 绘图区内部**（不进入 grid 外的 padding 圈），且**绝不探出 grid 上 / 下边缘**
+- 每个标签坐落在其对应网格线「朝 grid 内部」的一侧——**顶线标签往下挂、其余线标签往上顶**：
+  - **顶部轴标签**（轴最大值，落在最顶网格线）：grid 内部在其**下方** → 标签**顶边贴线、整体向下垂进第一格**（顶对齐）
+  - **其余轴标签**（中间值 / 0 值 / 最小值）：grid 内部在其**上方** → 标签**底边贴线、整体向上探入上一格**（底对齐）
+  - 因此每个标签始终位于其对应网格线的**单侧**（顶标签在线下、其余在线上），与网格线**永不重叠**；没有标签骑线居中、也没有标签探出 grid
+- **验收判据（渲染后逐条核对，与实现库无关）**：① 最顶标签上边缘 y ≥ grid 上沿 y（**不溢出顶部** —— 最常见错误）；② 最顶标签整体落在第一格内（在顶线下方）；③ 最底 / 0 标签下边缘 ≤ grid 下沿 y（不溢出底部）
+- **落地提示**：顶标签与其余标签的垂直对齐方向**相反**——若实现库的轴标签垂直对齐是「全局一刀切」（如 ECharts `axisLabel.verticalAlign`），单一取值必有一端溢出，需 per-label 处理；ECharts 落地见 [echarts-implementation-hints.md § 陷阱 21](../echarts-implementation-hints.md)
+- **数据绘制范围左右内缩（避让带）**：Y 轴标签住在 grid 内，数据图形不能从 grid 边缘起画——在**有 Y 轴标签的每一侧**预留一条竖直「避让带」，数据绘制区从 grid 内边缘再向内缩掉这条带：
+  - **带宽 W** = 该侧最长 Y 轴标签的渲染宽度 + 安全间距
+  - **带起点 = grid 边缘**（紧贴内侧）；所有数据图元（柱 / 折线 / 散点 / 面）的横向范围限制在缩进后的区域内，起点贴带末端，与标签**水平分离、永不重叠**
+  - 单 Y 轴：仅有标签的一侧内缩；双 Y 轴：两侧均内缩；形式 B 不内缩（标签在 grid 外侧）
+  - **验收判据（渲染后必须为真，与实现库无关）**：任意 Y 轴标签的包围盒，与任意数据图元的包围盒，**不相交**
 - **适用图表族**：
 
   | 适用 | 图表 |
@@ -53,7 +56,7 @@ Y 轴标签有两种布局形式，**默认使用形式 A**：
   | ✅ 柱状（category X） | bar / grouped-bar / stacked-bar / normalized-stacked-bar / waterfall / bar-line-combo |
   | ✅ 折线（category X） | line / multi-line / area-highlight / marker-line / rank-line / marker |
   | ❌ 不适用 | horizontal-bar（Y=category，本规则与之无关）/ 无 grid 类（pie / donut / half-donut / petal / radar / treemap / sankey / relationship / two-way-tree / venn / word-cloud） |
-- **ECharts 落地**：value / time 轴用 `boundaryGap: ['10%', '10%']` 直接生效；**category 轴**（即上表 12 个适用图表）ECharts 不支持数组形式 boundaryGap——`boundaryGap: true`（半 band 缓冲，每侧 ≈ `1/(2N)`）仅 **N ≤ 5** 时满足 10%；**N ≥ 6 需首尾补空类目**（categories 两端各加 `''`、series 数据补 `null`；每侧内缩 = `(0.5+k)/(N+2k)`，k = 每侧空类目数，k=1 覆盖 N ≤ 13、k=2 覆盖 N ≤ 21）。详见 [echarts-implementation-hints.md § 陷阱 19](../echarts-implementation-hints.md)
+- **落地实现**：按上述「带宽 = 标签宽 + 安全间距」不变量在目标库中实现（数据 scale range 内缩 / domain padding / 绘制起点偏移等，各库手段不一）；ECharts 的具体落地（value/time 轴、category 轴需首尾补空类目）见 [echarts-implementation-hints.md § 陷阱 19](../echarts-implementation-hints.md)
 
 ### 形式 B：坐标轴在网格外部 + 标签与网格线居中对齐
 

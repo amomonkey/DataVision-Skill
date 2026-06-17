@@ -55,6 +55,16 @@
 - **堆叠柱状图**：仅最顶端段的上左、上右 2px 圆角，中间分段及底部无圆角
 - **归一化堆叠柱状图 / 瀑布图**：无圆角（不覆盖，继承 base 主题 0px）
 
+### 柱体最大宽度 — ⚠️ 覆盖 base 主题
+
+| Token | base 主题 | THS 覆盖 |
+| --- | --- | --- |
+| `size-bar-max` | 32px | **16px** |
+
+所有柱状图类型（基础柱状图、分组柱状图、堆叠柱状图、折柱组合图等）的**单柱最大宽度**为 16px。
+
+> ⚠️ **仅 THS（含 iFinD-Mobile）下成立**：base 主题柱体最大宽度为 32px（`size-bar-max`），16px 是 THS 的 delta 覆盖，不要反向套回 base。
+
 ### 桑基图节点颜色 — ⚠️ 覆盖 base 主题
 
 | 节点类型 | base 主题 | THS 覆盖 |
@@ -66,4 +76,18 @@
 ### 水印
 
 沿用 base（base 水印 SVG 36×10，grid 右下角，距 grid 右 36px，6% 黑 light / 6% 白 dark）。通用机制（加载方式 / 锚定 / 资源协议 / 反例）见 [components/watermark.md](../components/watermark.md)。
+
+### Tooltip 显示位置 — ⚠️ 覆盖 base 主题
+
+| 项 | base 主题 | THS 覆盖 |
+| --- | --- | --- |
+| Tooltip 显示位置 | 位置 A（跟随鼠标右下） | **位置 C**（带 X 轴坐标的图）+ **A**（饼图等无坐标图回退）；C = 固定上方左 / 右两侧、不跟随指针 |
+
+> THS（含 **iFinD-Mobile**）的 Tooltip 采用 **位置 C** —— 固定贴绘制区上方、不跟随指针；水平以**图表中点**为基准镜像避让（触发**左半区 → 显示右侧**、**右半区 → 显示左侧**）。完整规则见 [tooltip.md § 位置 C 定位规则](../components/tooltip.md#位置-c-定位规则)，三档对照见 [§ Tooltip 显示位置](../components/tooltip.md#tooltip-显示位置)。
+>
+> **适用范围**：位置 C 仅用于**带 X 轴坐标（直角坐标系）的图表**——折线族（line / multi-line / area-highlight / marker-line / rank-line / marker）、柱状族（bar / grouped-bar / stacked-bar / normalized-stacked-bar / **horizontal-bar** / bar-line-combo / waterfall）、scatter / beeswarm。**无坐标系的图表**（pie / donut / half-donut / petal / radar / treemap / sankey / relationship / two-way-tree / venn / word-cloud）回退 **位置 A**（跟随光标）。
+>
+> ⚠️ 横向条形图（horizontal-bar）在 THS 下用 **C**（它带 X 轴坐标，C 不依赖 X 必须是 category 轴）；而在 Ainvest 下回退 **A**（B 要求 X 必须是 category 轴，横条 category 在 Y）——两主题判据不同，归属不同属预期。
+>
+> 仅「显示位置」一项覆盖；其余 Tooltip 参数（背景 `#3B3B3B` / 圆角 4px / 触发 `trigger:'axis'` / 移出延迟 2000ms 等）未列，继承 base。
 

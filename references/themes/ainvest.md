@@ -119,54 +119,53 @@ Ainvest 8 色色板，**独立硬编码**，不取自 `color-visualization-*` to
 
 ### 1.6 Tooltip 形态（端通用 / 仅折线柱状）
 
-> ⚠️ **必读 1**：本节描述的"下三角 + 锚定 grid 上方 + 边缘 clamping"形态**仅适用于折线 / 柱状图族**（见下方「适用范围」白名单）。其他图表（饼 / 环 / 雷达 / 散点 / treemap / sankey / 关系图 / 词云 / 韦恩 / 双向树 等）**回退到 base tooltip 行为**——跟随光标、无三角，不要套用本节规则。
+> 📌 **形态 = [tooltip.md 位置 B（上方跟随指针）](../components/tooltip.md#位置-b-定位算法库无关)**——下三角 + 锚 grid 上沿 + 边缘 clamp + 三角反向偏移的**库无关 4 步算法 / 不变量 / 禁忌 / 自检清单统一在 tooltip.md 维护**，本节只记 Ainvest 的 delta 取值 + 适用白名单，不重复算法。
 >
-> ⚠️ **必读 2**：实现时必须按下方「验收清单」逐条落地——只改 `backgroundColor` + `hideDelay` **不算实现**。ECharts 完整代码、反例与 5 条易错点见 [echarts-implementation-hints.md § 陷阱 18](../echarts-implementation-hints.md)。
+> ⚠️ 只改 `backgroundColor` + `hideDelay` **不算实现**；必须按 tooltip.md 位置 B 的 4 步算法落地。ECharts 完整 `position` 回调代码、反例与 5 条易错点见 [echarts-implementation-hints.md § 陷阱 18](../echarts-implementation-hints.md)。
 
-#### 适用范围
+#### 适用范围（哪些图启用位置 B）
 
 | 适用 | 图表类型 | 结构前提 |
 | --- | --- | --- |
 | ✅ 折线图族 | line / multi-line / area-highlight / marker-line / rank-line / marker | 有 grid + X category/time 轴 |
-| ✅ 柱状图族 | bar / grouped-bar / stacked-bar / normalized-stacked-bar / horizontal-bar / bar-line-combo / waterfall | 同上 |
-| ❌ 不适用（回退 base） | pie / donut / half-donut / petal / radar / scatter / beeswarm / treemap / sankey / relationship / two-way-tree / venn / word-cloud | 无 grid 或无 category X 轴，定位依据失效 |
+| ✅ 柱状图族 | bar / grouped-bar / stacked-bar / normalized-stacked-bar / bar-line-combo / waterfall | 同上 |
+| ❌ 不适用（回退位置 A） | pie / donut / half-donut / petal / radar / scatter / beeswarm / treemap / sankey / relationship / two-way-tree / venn / word-cloud；**横向条形图（horizontal-bar）** | 无 grid 或无 category X 轴，定位依据失效。**横向条形图特例**：category 在 **Y 轴**、数值在 X 轴，不满足 B 的"X category 轴 + grid 上方留白"前提，回退 A（与 [horizontal-bar.md](../charts/horizontal-bar.md) 自述"跟随鼠标"一致） |
 
-> 原因：本形态依赖**横向 X 轴 + grid 上方留白带**两个结构前提；缺一即回退到 base。
+> 原因：位置 B 依赖**横向 X 轴 + grid 上方留白带**两个结构前提；缺一即回退 **位置 A**（base 默认跟随鼠标右下，见 [tooltip.md § Tooltip 显示位置](../components/tooltip.md#tooltip-显示位置)）。
 
-#### 形态规则
+#### Ainvest delta 取值（相对 base）
 
 | 项 | base 主题 | Ainvest 覆盖 |
 | --- | --- | --- |
+| 位置形态 | 位置 A（跟随鼠标右下） | **位置 B（上方跟随指针 + 下三角；算法见 [tooltip.md](../components/tooltip.md#位置-b-定位算法库无关)）** |
 | 背景 | `#3B3B3B`（`color-visualization-tooltip`） | **`#383838`** |
-| 形态 | 黑色气泡，跟随 grid 定位，无指示三角 | **带向下三角指示器**；水平跟随光标居中，垂直固定在 **grid 上方外侧**（图表区域与 grid 之间的留白区域） |
-| 空间占用 | — | Tooltip 为**临时遮挡物**，不得为其预留显示空间——grid 布局（`grid.top` 等）不应因 Tooltip 而改变，Tooltip 显示时直接覆盖上方内容（标题、图例等） |
-| 边缘处理 | 跟随鼠标自适应 | 水平跟随光标居中，但 **不超出图表区域边界**：当 Tooltip 接近左 / 右边缘时，三角指示器仍指向光标线，气泡整体向内收缩贴边显示 |
+| 下三角指示器 | 无 | **有，`#383838` 同色，高 6px**（即算法中 `tooltipTop = gridTopY − th − 6` 的 6） |
 | 移出延迟隐藏 | 2000ms（`hideDelay`） | **0ms**（立即隐藏；`axisPointer.dvHideDelay` 0） |
 | 触发 / 过渡 | `trigger:'axis'` / `transitionDuration:0` | 同 |
 | 圆角 | 4px | 4px（同） |
-
-#### 验收清单（实现时逐条 check，缺一项不算实现）
-
-- [ ] **基础参数**：背景 `#383838` / `hideDelay:0` / `transitionDuration:0` / `trigger:'axis'` / 圆角 4px
-- [ ] **下三角指示器**：`#383838` 同色，高 6px；通过 `formatter` 返回 HTML 里塞元素实现——**不能用 `extraCssText` 加 `::before/::after` 伪元素**（伪元素需 `<style>` 标签注入，inline style 无效）
-- [ ] **`tooltip.position` 回调**：垂直锚定 grid 上沿外侧（`chart.convertToPixel({gridIndex:0}, [0, yMax])[1]` 取像素 y）；水平 = 光标 x − tooltipW/2
-- [ ] **边缘 clamping + 三角偏移**：贴边时气泡 `x = clamp(x, 0, chartW - tooltipW)`，**同时**让三角 `left` 偏移到原光标 x 位置（"贴边时三角仍指向光标"的关键）
-- [ ] **`confine: true` 禁用**：与自定义 position 冲突，clamping 必须在 position 回调里手算
-- [ ] **不为 tooltip 预留 grid 空间**：`grid.top` 由图例高度决定，**不**为 tooltip 额外加间距；tooltip 显示时直接遮 legend / 标题是预期行为
 
 > 📐 位置与边缘处理示意：
 > ![Ainvest Tooltip 位置示意](../../assets/examples/_shared/tooltip-position-ainvest.png)
 > 左：光标在左侧，Tooltip 居中显示；中：光标偏右，Tooltip 仍居中；右：光标贴近右边缘，气泡贴边、三角偏移指向光标线。
 
-**ECharts 完整实现代码**：见 [echarts-implementation-hints.md § 陷阱 18](../echarts-implementation-hints.md)。
-
 ### 1.7 涨跌色 / 桑基图节点配色
+
+**涨跌色 — ⚠️ 海外「绿涨红跌」（与 base / A 股语义反转）：**
+
+| Token | base 主题 | Ainvest 覆盖 |
+| --- | --- | --- |
+| `color-price-up`（上涨） | `#FF2436`（红） | **`#00B53C`**（绿） |
+| `color-price-down`（下跌） | `#07AB4B`（绿） | **`#FF381A`**（红） |
+
+> ⚠️ **语义反转**：base / A 股是「红涨绿跌」，Ainvest 海外是「绿涨红跌」——涨 / 跌方向不变，只是映射到的颜色对调。`color-price-even`（平盘）未覆盖，继承 base。仍遵守 [SKILL § 全局规则 3](../../SKILL.md#3-颜色按用途使用对应-token-category)：涨跌只用 `color-price-*`，不得复用 status 色。
+
+**桑基图节点配色**（汇节点直接复用上面的涨跌色）：
 
 | 节点类型 | base 主题 | Ainvest 覆盖 |
 | --- | --- | --- |
 | 源节点 + 中间节点 | `color-visualization-primary`（`#3366FF`） | **`#265FFC`** |
-| 汇节点（正值） | `color-price-up`（`#FF2436`） | **`#00B53C`**（绿，海外配色习惯） |
-| 汇节点（负值 / 支出） | `color-price-down`（`#07AB4B`） | **`#FF381A`**（红） |
+| 汇节点（正值） | `color-price-up` | **`#00B53C`**（= 涨色绿） |
+| 汇节点（负值 / 支出） | `color-price-down` | **`#FF381A`**（= 跌色红） |
 
 > 业务线身份级配色——mobile 与 PC 共享。
 

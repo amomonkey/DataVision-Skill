@@ -358,6 +358,8 @@ xAxis: {
 ```
 > 用 paradigm-chart / iFinD 主题时，`xAxis.axisLabel.dvAlignEdge: true` 已内置此对齐（iFinD 另有「两侧空白 5%、28~60px」留白规则双保险）；走原生 ECharts 才需手动加 `alignMinLabel/alignMaxLabel`。
 
+> ⚠️ **仅 `boundaryGap: false`（首尾数据贴 grid 边）适用**。`boundaryGap: true`（柱状族 / category 轴——首尾落在 band 中心、距边有半 band 缓冲）**不要加 `alignMinLabel/alignMaxLabel`**：首尾标签本应居中、与柱 / 点对齐，强行首左 / 尾右对齐会把它们推离 band 中心，造成 X 轴标签与数据错位（带 datazoom 时每个窗口边缘标签都会中招）。权威规则见 [axes.md § X 轴标签](components/axes.md)。
+
 ### 陷阱 12：图例标记形状全部一样（没有区分柱/线/圆）
 
 **症状**：所有图表的图例标记都是 `roundRect` 方块（或都是 `circle` 圆点），折线图的图例看不出是线形。
@@ -539,9 +541,9 @@ tooltip: {
       // p.seriesType 是 'bar' / 'line' / 'pie' 等
       // theme.tooltipMarker 是主题级 override（默认 undefined → 按 series 类型走）
       var marker = markerHtml(p.seriesType, p.color, currentTheme.tooltipMarker);
-      html += '<div style="display:flex;justify-content:space-between;">'
-            +   '<span>' + marker + p.seriesName + '</span>'
-            +   '<span style="margin-left:24px;">' + p.value + '</span>'
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+            +   '<span style="min-width:0;word-break:break-word;">' + marker + p.seriesName + '</span>'
+            +   '<span style="margin-left:24px;flex-shrink:0;white-space:nowrap;">' + p.value + '</span>'
             + '</div>';
     });
     return html;
@@ -565,6 +567,7 @@ var THEME_BASE = {
 3. **主题切换钩子**：themeMarker 写到主题对象上，formatter 闭包持有 currentTheme 引用，切主题后 `chart.setOption({tooltip:{formatter:...}})` 重设。否则 tooltip 还是旧主题形状。
 4. **不要硬编码 12×12**——tooltip.md 旧版写的 12×12 已废止，标记尺寸跟 legend 走（6×6 / 8×2）。tooltip 内行高靠 padding / line-height，不靠 marker 撑高。
 5. **dataItem 行不要混色**：marker 颜色 = `p.color`（series 配色），不要用 visualization-09 等中性色。
+6. **系列名换行须顶对齐第一行**：行容器 `align-items:flex-start` + 数值 span `white-space:nowrap;flex-shrink:0` + 系列名 span `min-width:0`。漏 `align-items` → 数值随多行块**垂直居中**、偏离第一行；漏 `min-width:0` → 长系列名在 flex 里**不换行反而撑破** `max-width:160px`（flex item 默认 `min-width:auto` 不收缩）。库无关规则见 [tooltip.md § 系列名过长换行对齐](components/tooltip.md#系列名过长换行对齐)。
 
 ---
 
@@ -713,6 +716,8 @@ chart.setOption({
 ---
 
 ### 陷阱 18：Ainvest tooltip 只做了背景色，三角 / 锚定 / 边缘 clamping 全跳过
+
+> 📌 本陷阱 = [tooltip.md § 位置 B 定位算法（库无关）](components/tooltip.md#位置-b-定位算法库无关) 的 **ECharts 落地版**。库无关的 4 步公式 / 两条不变量 / 6 条禁忌 / 自检清单看那里；本节是把它落进 ECharts `tooltip.position` 回调的具体代码。Ainvest 取值（`#383838` / 三角高 6 等）见 [ainvest.md §1.6](themes/ainvest.md#16-tooltip-形态端通用--仅折线柱状)。
 
 **症状**：spec 说 Ainvest tooltip "带下三角 + 锚定 grid 上方 + 边缘自适应"，落地后 hover 折线 / 柱状图看到的是普通深色 tooltip 跟着光标飘——背景色对了，三角没有、位置没锚定、贴边时也没有"三角仍指向光标"的细节。
 
@@ -954,6 +959,63 @@ legend: {
 | **陷阱 20（本条）** | **series.itemStyle 反向污染 legend icon 视觉**——空心 / 撑大 / 形状错的根因 |
 
 前 3 条解决"legend 自己 config 写错"；本条解决"legend config 写对了、被 series 污染了"。
+
+---
+
+### 陷阱 21：形式 A 顶部 Y 轴标签溢出 grid 顶（verticalAlign 全局一刀切）
+
+**症状**：形式 A 下，Y 轴最大值标签（最顶那条）跑到最顶网格线**上方**、探出 grid（甚至顶进 legend / 单位行）；其余标签正常。
+
+**根因**：`yAxis.axisLabel.verticalAlign` 是**全局**设置、无法 per-label。但形式 A 要求「顶标签往下挂、其余标签往上顶」两个**相反**方向（见 [layout.md § 形式 A](components/layout.md#y-轴标签布局)）：
+
+| `verticalAlign` | 顶标签 | 中间 / 0 / 最小标签 | 结果 |
+| --- | --- | --- | --- |
+| `'bottom'` | 往上顶 → **溢出 grid 顶** | 往上顶 ✅ | 顶标签错（本症状） |
+| `'top'` | 往下挂 ✅ | 往下挂 → 落到线**下方**（侧别错） | 中间标签错 |
+| `'middle'`（默认） | 上半截出界 | 底标签下半截出界 | 两端都错 |
+
+任何单一取值都不满足；`verticalAlign` 又不支持 callback，所以必须 per-label 落地。
+
+**修法 A（推荐，原生 ECharts）：主轴 + 顶标签辅助轴叠加。** 主轴渲染「除最大值外」的标签、`verticalAlign:'bottom'`；再叠一条**只渲染最大值标签**、`verticalAlign:'top'` 的辅助 value 轴（共享 `min/max/interval/position`，关掉 splitLine/axisLine/axisTick、不重复 name）。两轴同 position + offset 0 像素重合，标签落在同一 x、不同 y，互不遮挡。
+
+```js
+// 把一个 value 轴配置拆成 [主轴, 顶标签轴]
+function insideYAxis(cfg) {                  // cfg 含 type:'value' / min / max / interval / position / axisLabel...
+  var max = cfg.max;
+  function make(isTop) {
+    var ax = Object.assign({}, cfg);
+    ax.axisLabel = Object.assign({}, cfg.axisLabel, {
+      inside: true,
+      verticalAlign: isTop ? 'top' : 'bottom',      // 顶标签下挂 / 其余上顶
+      formatter: function (v) {
+        var isMax = Math.abs(v - max) < 1e-6;
+        return (isTop ? isMax : !isMax) ? v : '';   // 顶轴只留 max，主轴去掉 max
+      }
+    });
+    if (isTop) { ax.splitLine = { show: false }; ax.axisLine = { show: false };
+                 ax.axisTick = { show: false }; ax.name = undefined; }
+    return ax;
+  }
+  return [make(false), make(true)];           // [主轴, 顶标签轴]
+}
+
+// 单 Y 轴：series 仍 yAxisIndex 0（主轴），顶标签轴是 index 1（无 series）
+option.yAxis = insideYAxis(yCfg);
+
+// 双 Y 轴（折柱组合）：主轴在前、顶标签轴在后，series.yAxisIndex 不变
+var L = insideYAxis(leftCfg), R = insideYAxis(rightCfg);
+option.yAxis = [L[0], R[0], L[1], R[1]];     // bar→yAxisIndex 0(L主), line→1(R主)
+```
+
+**修法 B（控制力最强）**：`axisLabel.show:false`，用 `graphic` / 自定义 series 自绘每条标签、逐条按规则设 verticalAlign。适合 paradigm-chart 这类已大量定制的实现。
+
+**易错点**：
+
+1. 顶标签轴**必须关 splitLine/axisLine/axisTick**，否则重复画网格线 / 多一条轴线。
+2. 两轴 `min/max/interval/position` **必须完全一致**，否则像素错位、顶标签与主轴标签不对齐。
+3. 浮点比较用 `Math.abs(v-max) < 1e-6`，不要 `v === max`。
+4. **双 Y 轴顺序**：主轴在前（index 0/1）、顶标签轴在后（index 2/3），保持 `series.yAxisIndex` 指向主轴。
+5. 形式 B **无此问题**（标签在 grid 外、与网格线居中对齐，单一 `verticalAlign:'middle'` 即可）。
 
 ---
 

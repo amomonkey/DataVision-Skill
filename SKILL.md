@@ -1,47 +1,30 @@
 ---
 name: vis-design-system
-description: 提供可视化图表的设计规范——共享规范（图例 / 坐标轴 / Tooltip / 滑块）、各图表类型的尺寸 / 颜色 / 交互 / 可配置项，并支持多业务线主题（base / iFinD / Ainvest / THS）在 base 主题之上的差异化覆盖。查询图表规范细节、或按业务线主题出图时触发。
+description: 提供可视化图表（柱状图 / 折线 / 饼图 / 桑基 / 雷达 等 20+ 类型）的设计规范——共享规范（图例 / 坐标轴 / Tooltip / 滑块）、各图表类型的尺寸 / 颜色 / 交互 / 可配置项，并支持多业务线主题（base / iFinD / Ainvest / THS）在 base 主题之上的差异化覆盖。查询图表规范细节、或按业务线主题出图时触发。
 version: 1.0.4
 ---
 
 # 可视化设计规范（Vis Design System）
 
-本 skill 是可视化图表的**单一事实来源**（single source of truth）。实现任何图表之前，先确定主题、再查阅对应主题文件、图表类型规范与 tokens。
-
-> 📌 **主题分层**：所有图表规范以 [**base 主题**](references/themes/base.md)（即「默认通用 / Default / General」的参数集，下文统称 base）为基准；业务线主题（[iFinD-PC](references/themes/ifind.md) / [Ainvest](references/themes/ainvest.md) / [THS](references/themes/ths.md)）仅记录相对 base 的 **delta** 覆盖。SKILL.md 本身只承载跨主题的全局规则与索引。
->
-> 📐 术语对照（base = 默认通用 = Default、PC = Web = 桌面端 等旧叫法）统一见文末 [§ 术语约定](#术语约定glossary)——边缘消歧用，无需提前记忆。
+图表规范的**单一事实来源**：以 [base 主题](references/themes/base.md) 为基准，业务线主题（[iFinD-PC](references/themes/ifind.md) / [Ainvest](references/themes/ainvest.md) / [THS](references/themes/ths.md)）记 delta 覆盖。出图前按 [§ 查阅顺序](#查阅顺序lookup-order) 取值；遇旧叫法（Default / Web 等）见文末 [§ 术语约定](#术语约定glossary)。
 
 ---
 
 ## 默认假设（Defaults）
 
-> 📌 **当用户用自然语言提问、未明确指定时，按以下默认值取值**：
+> 📌 用户未明确指定时按下表取默认值；**任一维度被显式点名（移动端 / dark / 某业务线主题 / 某实现库）即覆盖对应默认**。
 
 | 维度 | 默认值 | 说明 |
 | --- | --- | --- |
-| **主题** | **base 主题** | 用户未点名业务线（iFinD / Ainvest / THS）时取 base |
-| **端 / 平台** | **Web / PC（桌面端）** | 用户未说"移动端 / mobile / 手机"时取 PC；表内值带 "(PC)" / "(Web)" 标记的取那个；只标 "(移动端)" 的项需查 [components/](references/components/) 获取 PC 等价值或就近推导 |
-| **色彩模式** | **light（浅色）** | 用户未说 "dark / 深色 / 暗黑模式" 时取 light；tokens / 主题文件的浅 / 深双列默认取浅色列 |
-| **实现库** | **不预设默认**——由模型按上下文自行选择 | 项目代码上下文有线索（如 `import echarts` / `import { Chart } from '@antv/g2'`）就跟随；用户点名（"用 ECharts / AntV / G2 / D3 / Recharts"）就用其指定；都无线索时模型按合理推断（如 React 项目偏 Recharts、数据可视化偏 ECharts、自定义可视化偏 D3）并**在输出中告知所选** |
+| **主题** | **base 主题** | 未点名业务线（iFinD / Ainvest / THS）时取 base |
+| **端 / 平台** | **Web / PC** | 未说"移动端 / mobile"时取 PC；只标 "(移动端)" 的值需查 [components/](references/components/) 取 PC 等价值 |
+| **色彩模式** | **light** | 未说 "dark / 深色" 时取 light；tokens 浅 / 深双列取浅色列 |
+| **实现库** | **不预设**——模型按上下文选 | 有代码线索（如 `import echarts`）跟随；用户点名（ECharts / AntV / G2 / D3 / Recharts）则用其指定；都无则推断并**在输出中告知所选** |
 | **图表族** | 按用户语义推导 | 见 [图表索引](#图表索引chart-index) |
 
-**用户明确点名时按其覆盖**：
-- "移动端 / 手机版" → 端改 Mobile
-- "dark / 深色" → 模式改 dark
-- "用 Ainvest 主题 / 海外版" → 主题改 Ainvest
-- "用 ECharts / AntV / G2 / D3 / Recharts" → 实现库切换为指定
-
-**用户问句涉及不确定时**：
-- spec 标"待确认"项（如 Ainvest 柱顶圆角）→ **fallback 回 base 主题对应值**，并在输出中告知"按 base 处理"
-- spec 完全缺失（如 K 线图无文档）→ 询问用户或基于 base + 常识保守生成，并标注"未在 spec 中找到"
-
----
-
-## 适用场景
-
-- **查规范**：查询图表规范细节（柱距比例 / Tooltip 颜色 / 轴标签字号 / 色板序列等）——取到值即可，不必走完查阅流程。
-- **出图 / 出代码**：按主题（base / iFinD / Ainvest / THS）生成图表代码（ECharts / AntV / D3 等）——走完整 [§ 查阅顺序](#查阅顺序lookup-order)。
+**spec 本身不全时**（区别于「用户没指定」）：
+- 标"待确认"项（如 Ainvest 柱顶圆角）→ fallback 回 base 值，输出中告知"按 base 处理"
+- spec 完全缺失（如 K 线图无文档）→ 询问用户、或基于 base + 常识保守生成并标注"未在 spec 中找到"
 
 ---
 
@@ -62,12 +45,7 @@ version: 1.0.4
 
 > **第 3 步 hints**：用 ECharts **必查**（记录"知道规范值仍会写错 option"的高频陷阱 + 正确写法完整片段）；用 AntV / G2 / D3 / Recharts 等其他库**跳过**——映射全部针对 ECharts，按 base + chart spec 的"设计意图"自行映射目标库 API。
 
-**通用规则**：
-
-- base.md 末尾 **§ 被业务线主题覆盖项一览** = base ↔ 业务线 delta 横向对比速查
-- 各 chart 文档末尾 **§ 主题覆盖速查** = 该图表颜色 / 字体 / 形态在主题下可能被覆盖处
-- **覆盖优先级**：base → 主题级 → 图表级 → 实例级（最高），权威定义见 [§ 覆盖优先级](#覆盖优先级)
-- 维度叠加方式（色板整套替换 vs 其他维度 delta 覆盖）见 [§ 维度叠加规则](#维度叠加规则)
+**delta 速查**：base.md 末尾「§ 被业务线主题覆盖项一览」（base ↔ 业务线横向对比）+ 各 chart 末尾「§ 主题覆盖速查」（该图在主题下被覆盖处）；覆盖优先级 / 维度叠加见下文 [§ 覆盖优先级](#覆盖优先级) / [§ 维度叠加规则](#维度叠加规则)。
 
 ---
 
@@ -105,13 +83,11 @@ version: 1.0.4
 
 #### 5. 资源文件优先于参数描述（asset over params）
 
-> ⚠️ **本规则覆盖所有未来类似场景**——水印、品牌 logo、icon、tooltip 指示器图、自定义 marker 等只要 spec 引用了 `.svg` / `.png` / `.webp` 等文件，就吃这条。
+只要 spec 引用了 `.svg` / `.png` / `.webp` 文件（水印 / logo / icon / 自定义 marker 等）：
 
-- skill 引用的 `assets/examples/_shared/*.svg`、品牌 logo、icon 文件是**生产级资源**，不是说明图 / 示意图——出图 / 出代码时**必须直接加载使用**（`<img>` / `graphic.image` / Data URI / fetch 任一）
-- **不要**按文档表里的尺寸 / 颜色 / 字形参数自行用 `rect + text` 重绘——真实资源往往是多 path 组成的字形 / 图形，任何参数都无法等价于"加载这个文件"
-- 参数表（如「96×20、5% 黑、24×24」）仅用于**布局校验**——确认资源加载后的摆放、尺寸、透明度是否符合规范，**不是绘制依据**
-- **典型反例**（实际发生过）：spec 写「Ainvest 水印 96×20，5% 黑」→ 模型画了一个灰矩形 + "Ainvest" 文字 ❌——真实 SVG 是 9 条 path 组成的字形 logo，矩形 + 文字根本不像
-- **速判规则**：md 里 `![名字](xxx.svg)` 同时该资源被表格 / 列表 / 「来源 / 资源文件」节引用过 → **就是要直接用这个文件**，不是页面装饰图
+- **必须直接加载该文件**（`<img>` / `graphic.image` / Data URI 任一），**不要**按表里尺寸 / 颜色参数用 `rect + text` 重绘——真实资源是多 path 字形，参数无法等价。
+- 参数表（如「96×20、5% 黑」）仅用于**布局校验**（摆放 / 尺寸 / 透明度），不是绘制依据。
+- 反例：spec 写「Ainvest 水印 96×20」→ 画成灰矩形 + 文字 ❌（真实是 9 path 字形 logo）。
 
 
 ---
@@ -135,15 +111,7 @@ version: 1.0.4
 
 **覆盖优先级**见下 [§ 覆盖优先级](#覆盖优先级)（base → 主题级 → 图表级 → 实例级）。
 
-**端（mobile / PC）的处理**：端**不是完全正交**于业务线主题——同一业务线在不同端常有独立 delta（如 iFinD-PC 和 iFinD-Mobile 几乎是两套不同主题；Ainvest-Mobile 与 Ainvest-PC 也各自有端专属覆盖）。处理约定：
-
-| 端差异规模 | 文档组织 | 当前实例 |
-| --- | --- | --- |
-| 差异大、几乎两套 | **拆文件**（`<业务>-pc.md` / `<业务>-mobile.md`，或一边沿用另一主题文件） | iFinD：PC 用 [ifind.md](references/themes/ifind.md)，Mobile = [ths.md](references/themes/ths.md) |
-| 差异中、可共存一文件 | **单文件按端分节**（"共享 delta / Mobile 专有 / PC 专有"） | Ainvest：[ainvest.md](references/themes/ainvest.md) 按此三节组织 |
-| 差异小、表内并列即可 | **单文件、表内单元格双值并列**（如 `10px（移动端） / 12px（PC）`） | base：[base.md](references/themes/base.md) 通篇此模式 |
-
-**色彩模式**（light / dark）仍与业务线主题正交——同一主题文件在 light / dark 下都成立，沿用 tokens.md 的浅 / 深双列。
+**端（mobile / PC）不完全正交于主题**：同一业务线不同端可能是两套规范——iFinD-PC ↔ Mobile（Mobile 直接用 [ths.md](references/themes/ths.md)）、Ainvest-PC ↔ Mobile（[ainvest.md](references/themes/ainvest.md) 内按端分节），按上方主题表分别查。**色彩模式（light / dark）则与主题正交**：同一主题文件浅 / 深下都成立，沿用 tokens.md 双列。
 
 ### 覆盖优先级
 
@@ -160,9 +128,8 @@ version: 1.0.4
 | 图表级 | 某一**类**图表的规范 | 所有柱状图最大柱宽 32px |
 | 实例级（最高） | 某**一个**具体图表出图时自传的覆盖——最具体 | 首页那一根营收柱图，手动把某根柱改红 / 单独设 `barWidth` |
 
-> **「图表级 vs 实例级」**：图表级是"柱状图**这个类型**"的规则、对每个柱图都生效；实例级只对**那一个**具体图表生效，且压过前面所有档（ECharts 里即该图 `setOption({...})` 写死的值）。
->
-> 与下方 [§ 维度叠加规则](#维度叠加规则) 的关系：**本节定「谁覆盖谁」（排序）**；维度叠加规则定**「每个维度怎么合并」**（色板整套替换 vs 其他 delta 覆盖）。两者配合使用。
+> **图表级 vs 实例级**：图表级 = 「柱状图这一类」的规则；实例级 = 「那一个图」出图时写死的覆盖（ECharts 即该图 `setOption` 值），压过所有档。
+> **与维度叠加规则的分工**：本节定「谁覆盖谁」（排序），下方维度叠加定「每个维度怎么合并」。
 
 ### 维度叠加规则
 
@@ -184,98 +151,23 @@ version: 1.0.4
 
 ## 图表索引（Chart Index）
 
-### 类别比较 / 趋势分析
+> ⚠️ = 来自 paradigm-chart 工程实现、尚无独立设计 PDF，文档据工程整理，待设计师补稿复核。
 
-| 图表 | 文档 |
+| 用途 | 图表（→ 文档） |
 | --- | --- |
-| 基础柱状图（Bar） | [references/charts/bar.md](references/charts/bar.md) |
-| 分组柱状图（Grouped Bar） | [references/charts/grouped-bar.md](references/charts/grouped-bar.md) |
-| 折柱组合图（Bar + Line） | [references/charts/bar-line-combo.md](references/charts/bar-line-combo.md) |
-
-### 排名 / 长标签
-
-| 图表 | 文档 |
-| --- | --- |
-| 基础条形图（Horizontal Bar，横向） | [references/charts/horizontal-bar.md](references/charts/horizontal-bar.md) |
-
-### 部分占整体 / 构成
-
-| 图表 | 文档 |
-| --- | --- |
-| 堆叠柱状图（Stacked Bar） | [references/charts/stacked-bar.md](references/charts/stacked-bar.md) |
-| 归一化堆叠柱状图（Normalized Stacked Bar，百分比堆叠） | [references/charts/normalized-stacked-bar.md](references/charts/normalized-stacked-bar.md) |
-| 矩形树图（Treemap） ⚠️ | [references/charts/treemap.md](references/charts/treemap.md) |
-
-### 趋势 / 时间序列（折线图族）
-
-| 图表 | 文档 |
-| --- | --- |
-| 基础折线图（Line） | [references/charts/line.md](references/charts/line.md) |
-| 多折线图（Multi-Line） | [references/charts/multi-line.md](references/charts/multi-line.md) |
-| 区域高亮折线图（Area-Highlight Line） | [references/charts/area-highlight-line.md](references/charts/area-highlight-line.md) |
-| 特殊标记折线图（Marker Line） | [references/charts/marker-line.md](references/charts/marker-line.md) |
-| 排名线图（Rank Line） ⚠️ | [references/charts/rank-line.md](references/charts/rank-line.md) |
-
-### 占比 / 比例（饼图族）
-
-| 图表 | 文档 |
-| --- | --- |
-| 饼图（Pie） | [references/charts/pie.md](references/charts/pie.md) |
-| 环状图（Donut） | [references/charts/donut.md](references/charts/donut.md) |
-| 半环状图（Half-Donut） | [references/charts/half-donut.md](references/charts/half-donut.md) |
-| 花瓣图（Petal） ⚠️ | [references/charts/petal.md](references/charts/petal.md) |
-
-### 多维对比
-
-| 图表 | 文档 |
-| --- | --- |
-| 雷达图（Radar） | [references/charts/radar.md](references/charts/radar.md) |
-
-### 分布
-
-| 图表 | 文档 |
-| --- | --- |
-| 散点图（Scatter） ⚠️ | [references/charts/scatter.md](references/charts/scatter.md) |
-| 蜂群图（Beeswarm） ⚠️ | [references/charts/beeswarm.md](references/charts/beeswarm.md) |
-
-### 流程 / 累积变化
-
-| 图表 | 文档 |
-| --- | --- |
-| 瀑布图（Waterfall） ⚠️ | [references/charts/waterfall.md](references/charts/waterfall.md) |
-
-### 层级关系
-
-| 图表 | 文档 |
-| --- | --- |
-| 双向树图（Two-Way Tree） ⚠️ | [references/charts/two-way-tree.md](references/charts/two-way-tree.md) |
-
-### 流向 / 网络关系
-
-| 图表 | 文档 |
-| --- | --- |
-| 桑基图（Sankey） ⚠️ | [references/charts/sankey.md](references/charts/sankey.md) |
-| 关系图谱（Relationship Diagram） ⚠️ | [references/charts/relationship-diagram.md](references/charts/relationship-diagram.md) |
-
-### 集合关系
-
-| 图表 | 文档 |
-| --- | --- |
-| 韦恩图（Venn） ⚠️ | [references/charts/venn.md](references/charts/venn.md) |
-
-### 文本可视化
-
-| 图表 | 文档 |
-| --- | --- |
-| 词云（Word Cloud） ⚠️ | [references/charts/word-cloud.md](references/charts/word-cloud.md) |
-
-### 辅助标记（叠加到其他图表）
-
-| 图表 | 文档 |
-| --- | --- |
-| 标记系列（Marker） ⚠️ | [references/charts/marker.md](references/charts/marker.md) |
-
-> ⚠️ 标记的图表来自 paradigm-chart 代码实现，**尚无独立设计 PDF**——文档基于工程实现整理，等设计师补 PDF 后复核。
+| 类别比较 / 趋势 | [基础柱](references/charts/bar.md) · [分组柱](references/charts/grouped-bar.md) · [折柱组合](references/charts/bar-line-combo.md) |
+| 排名 / 长标签 | [横向条形](references/charts/horizontal-bar.md) |
+| 构成 / 占整体 | [堆叠柱](references/charts/stacked-bar.md) · [归一化堆叠](references/charts/normalized-stacked-bar.md) · [树图 ⚠️](references/charts/treemap.md) |
+| 趋势 / 时间序列 | [折线](references/charts/line.md) · [多折线](references/charts/multi-line.md) · [区域高亮折线](references/charts/area-highlight-line.md) · [标记折线](references/charts/marker-line.md) · [排名线 ⚠️](references/charts/rank-line.md) |
+| 占比 / 比例 | [饼图](references/charts/pie.md) · [环图](references/charts/donut.md) · [半环图](references/charts/half-donut.md) · [花瓣 ⚠️](references/charts/petal.md) |
+| 多维对比 | [雷达](references/charts/radar.md) |
+| 分布 | [散点 ⚠️](references/charts/scatter.md) · [蜂群 ⚠️](references/charts/beeswarm.md) |
+| 流程 / 累积变化 | [瀑布 ⚠️](references/charts/waterfall.md) |
+| 层级关系 | [双向树 ⚠️](references/charts/two-way-tree.md) |
+| 流向 / 网络关系 | [桑基 ⚠️](references/charts/sankey.md) · [关系图谱 ⚠️](references/charts/relationship-diagram.md) |
+| 集合关系 | [韦恩 ⚠️](references/charts/venn.md) |
+| 文本可视化 | [词云 ⚠️](references/charts/word-cloud.md) |
+| 辅助标记（叠加到其他图表） | [标记系列 ⚠️](references/charts/marker.md) |
 
 
 ---
@@ -293,16 +185,14 @@ version: 1.0.4
 
 ## Base 主题高频踩坑速查（Gotchas）
 
-> 📌 **base 主题的完整取值表在 [references/themes/base.md](references/themes/base.md)**——画 base 图直接打开该文件取值，**不要从本节找具体数值**。本节只留几条**反直觉 / 易写错**的默认值作防错提醒；其余值（图表尺寸、字体、色值、Tooltip 背景、Z-Index 等）一律去 base.md。
->
-> base.md 中标「⚠️ 主题差异点」的项即高频被业务线主题覆盖项；用了业务线主题就再打开对应主题文件叠 delta。
+> 📌 完整取值见 [base.md](references/themes/base.md)；本节只留几条**反直觉 / 易写错**的防错提醒，不在此找具体数值。base.md 标「⚠️ 主题差异点」的项即高频被业务线主题覆盖项。
 
 | 易错点 | 正确值（反直觉处） | 详查 |
 | --- | --- | --- |
 | 图例默认对齐 | **左对齐**（不是 center） | [base.md § 图例legend](references/themes/base.md#图例legend) |
 | Y 轴分割线 | **强制 5 条**（`splitNumber:4` 仅建议，需配 `min/max/interval`） | [base.md § 网格线grid](references/themes/base.md#网格线grid) + [echarts-implementation-hints.md 陷阱 3](references/echarts-implementation-hints.md) |
 | 形式 A 数据内缩 | Y 轴标签在 grid 内部时，数据区两侧 **10%** 内缩；value/time 轴用 `boundaryGap:['10%','10%']`；category 轴 `boundaryGap:true` 仅 N≤5 达标，**N≥6 首尾补空类目** | [layout.md § Y 轴标签布局](references/components/layout.md#y-轴标签布局) + [echarts-implementation-hints.md 陷阱 19](references/echarts-implementation-hints.md) |
-| 柱体最大宽 | 32px（**不是 16px**） | [base.md § 关键尺寸](references/themes/base.md#关键尺寸) |
+| 柱体最大宽 | 32px | [base.md § 关键尺寸](references/themes/base.md#关键尺寸) |
 
 
 ---
@@ -315,7 +205,7 @@ version: 1.0.4
   - [components/legend.md](references/components/legend.md) — 图例容器 / 标记形状 / 排列 / 交互 / 分页器
   - [components/axes.md](references/components/axes.md) — X/Y 轴标签 / 轴标题 / 刻度线 / 双 Y 轴
   - [components/grid.md](references/components/grid.md) — 网格线 / 0 轴线
-  - [components/tooltip.md](references/components/tooltip.md) — Tooltip 气泡 / 光标线 / 高亮标签轴 / 交互行为
+  - [components/tooltip.md](references/components/tooltip.md) — Tooltip 气泡 / 显示位置档位（A/B/C，端无关·主题无关）/ 光标线 / 高亮标签轴 / 交互行为
   - [components/data-label.md](references/components/data-label.md) — 数据标签通用规范
   - [components/datazoom.md](references/components/datazoom.md) — 数据缩放滑块
   - [components/playback.md](references/components/playback.md) — 动态播放轴
